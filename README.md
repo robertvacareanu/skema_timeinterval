@@ -1,0 +1,1 @@
+# skema_timeinterval
