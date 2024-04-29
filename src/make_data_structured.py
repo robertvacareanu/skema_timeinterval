@@ -1,6 +1,8 @@
 from typing import Dict, Any
+from src.utils import normalize_date
 
-def line_to_dict(line: str):
+
+def line_to_dict(line: str, should_normalize_date: bool = False):
     # Split the input string by semicolon to separate key-value pairs
     pairs = line.strip().split(';')
     result = {}
@@ -23,6 +25,12 @@ def line_to_dict(line: str):
             result[key] += value
         else:
             result[key] = value    
+    
+    
+    if should_normalize_date:
+        if 'time' in result:
+            result['time'] = [normalize_date(date) for date in result['time']]
+    
     return result
 
 
