@@ -16,4 +16,12 @@ CUDA_VISIBLE_DEVICES=0 python -i -m src.t5_specific_event --seed 1 --weight_deca
 ```
 
 #### Flags
-- 
+- `seed` -> The random seed to use; Used for: (1) Setting `transformers` seed (with `transformers.set_seed()`) and (2) Random object, for shuffling and data splitting
+- `weight_decay` -> The weight decay parameter, used with Huggingface transformers `Trainer`
+- `model_name` -> The name of the model, to be loaded (with `AutoModelForSeq2SeqLM.from_pretrained(model_name)`)
+- `saving_path` -> Where to save the results. Used in (1) `Seq2SeqTrainingArguments` (`outputs/{saving_path}`), (2) Saving debug lines
+- `training_steps` -> For how many steps to train for
+- `learning_rate` -> The learning rate
+- `use_original` -> Whether to use the original data for training; It is used for testing regardless of the status of this flag
+- `use_paraphrase` -> Whether to use the paraphrase data for training and testing
+- `use_synthetic` -> Whether to use the synthetic data for training and testing
