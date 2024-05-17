@@ -14,36 +14,20 @@ import random
 
 import torch
 import datasets
-import argparse
 from transformers import DataCollatorForSeq2Seq
 from transformers import AutoModelForSeq2SeqLM, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
 from datetime import datetime
 from src.metrics import evaluate_sets
 from src.make_data_structured import line_to_dict
-from src.utils import get_hash, remove_unnecessary_content
+from src.utils import get_hash, remove_unnecessary_content, preprocess_function
 from src.metrics import evaluate_individual_sets_per_token
+from src.parser_utils import get_parser
 
 import wandb
 
 wandb.init(mode='disabled')
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--seed", type=int, default=1, help="Random Seed")
-parser.add_argument("--weight_decay", type=float, default=0.1, help="Weight Decay")
-parser.add_argument("--model_name", type=str, default="t5-base", help="Model name")
-parser.add_argument("--saving_path", type=str, help="Where to save")
-parser.add_argument("--training_steps", type=int, default=10000, help="The number of training steps (gradient updates)")
-parser.add_argument("--learning_rate", type=float, default=3e-5, help="The learning rate")
-parser.add_argument("--use_original", action='store_true', help="If set, we will use original data for training. We evaluate on original data regardless")
-parser.add_argument("--use_paraphrase", action='store_true')
-parser.add_argument("--use_synthetic", action='store_true')
-parser.add_argument("--print_debug", action='store_true')
-parser.add_argument("--debug_saving_path", type=str, help="Where to save the debug outputs")
-
-parser.add_argument("--per_device_train_batch_size", type=int, default=4, help="Batch size for training (default=4)")
-parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Gradient Accumulation")
 
 source_id2name = {
     0: 'original',
@@ -53,6 +37,7 @@ source_id2name = {
 
 source_name2id = {v:k for (k, v) in source_id2name.items()}
 
+parser = get_parser()
 
 args = vars(parser.parse_args())
 
@@ -135,25 +120,9 @@ data = datasets.DatasetDict({
     'test' : datasets.Dataset.from_list(test),
 })
 
-def preprocess_function(examples):
-
-    # Tokenizes the prepended input texts to convert them into a format that can be fed into the T5 model.
-    # Sets a maximum token length of 1024, and truncates any text longer than this limit.
-    model_inputs = tokenizer(examples["input"], max_length=1024, truncation=True)
-
-    labels = tokenizer(text_target=examples["output"], max_length=128, truncation=True)
-
-    # Assigns the tokenized labels to the 'labels' field of model_inputs.
-    # The 'labels' field is used during training to calculate the loss and guide model learning.
-    model_inputs["labels"] = labels["input_ids"]
-
-    # Returns the prepared inputs and labels as a single dictionary, ready for training.
-    return model_inputs
-    
-
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-tokenized = data.map(preprocess_function, batched=True)
+tokenized = data.map(lambda examples: preprocess_function(examples, tokenizer), batched=True)
 
 print(tokenized)
 
@@ -223,6 +192,7 @@ for batch in tqdm.tqdm(torch.utils.data.DataLoader(tokenized['test'].remove_colu
     test_source      += [source_id2name[x] for x in batch['source'].detach().cpu().tolist()]
 
 from langchain_community.callbacks import get_openai_callback
+# Transform the generated text into a structured format
 with get_openai_callback() as cb1:
     test_expected    = [line_to_dict(x, should_normalize_date=True) for x in test_expected]
     test_generations = [line_to_dict(x, should_normalize_date=True) for x in test_generations]

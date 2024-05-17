@@ -143,6 +143,26 @@ def normalize_date(date: str, use_examples: bool = False, how_many_examples: int
 
     return output
 
+def preprocess_function(examples, tokenizer, max_length=1024, truncation=True):
+    """
+    Inspired from Huggingface examples. See, for example, `https://huggingface.co/docs/transformers/v4.28.1/tasks/summarization`
+    """
+
+    # Tokenizes the prepended input texts to convert them into a format that can be fed into the T5 model.
+    # Sets a maximum token length (default=1024), and truncates any text longer than this limit.
+    model_inputs = tokenizer(examples["input"], max_length=max_length, truncation=truncation)
+
+    labels = tokenizer(text_target=examples["output"], max_length=128, truncation=truncation)
+
+    # Assigns the tokenized labels to the 'labels' field of model_inputs.
+    # The 'labels' field is used during training to calculate the loss and guide model learning.
+    model_inputs["labels"] = labels["input_ids"]
+
+    # Returns the prepared inputs and labels as a single dictionary, ready for training.
+    return model_inputs
+    
+
+
 
 if __name__== "__main__":
     from langchain_community.callbacks import get_openai_callback

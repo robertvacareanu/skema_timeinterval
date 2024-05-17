@@ -22,30 +22,14 @@ from transformers import AutoModelForSeq2SeqLM, Seq2SeqTrainingArguments, Seq2Se
 from datetime import datetime
 from src.metrics import evaluate_sets
 from src.make_data_structured import line_to_dict
-from src.utils import get_hash, remove_unnecessary_content
+from src.utils import get_hash, remove_unnecessary_content, preprocess_function
 from src.metrics import evaluate_individual_sets_per_token
 
 from src.make_data_structured import normalize_date
+from src.parser_utils import get_parser
 import wandb
 
 wandb.init(mode='disabled')
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--seed", type=int, default=1, help="Random Seed")
-parser.add_argument("--weight_decay", type=float, default=0.1, help="Weight Decay")
-parser.add_argument("--model_name", type=str, default="google/flan-t5-base", help="Model name")
-parser.add_argument("--saving_path", type=str, help="Where to save")
-parser.add_argument("--training_steps", type=int, default=10000, help="The number of training steps (gradient updates)")
-parser.add_argument("--learning_rate", type=float, default=3e-5, help="The learning rate")
-parser.add_argument("--use_original", action='store_true', help="If set, we will use original data for training. We evaluate on original data regardless")
-parser.add_argument("--use_paraphrase", action='store_true')
-parser.add_argument("--use_synthetic", action='store_true')
-parser.add_argument("--print_debug", action='store_true')
-parser.add_argument("--debug_saving_path", type=str, help="Where to save the debug outputs")
-
-parser.add_argument("--per_device_train_batch_size", type=int, default=4, help="Batch size for training (default=4)")
-parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Gradient Accumulation")
 
 source_id2name = {
     0: 'original',
@@ -64,7 +48,7 @@ type_name2id = {
 type_id2name = {v:k for (k, v) in type_name2id.items()}
 
 
-
+parser = get_parser()
 args = vars(parser.parse_args())
 
 seed           = args['seed']
@@ -105,11 +89,11 @@ for w in banned_contents_words:
     original_data = [x for x in original_data if w not in x['contents']]
 
 # Set the "text" as the "original" field, which will be used as some form of "hash"
+# This is helpful to avoid: (i) having original data in train and a paraphrase of it in testing, (ii) separate based on event type
 original_data = [{**x, 'original': x['text']} for x in original_data]
 original_data = [remove_unnecessary_content(x) for x in original_data]
 original_data = [x for x in original_data if len(x['contents'].split(" ")) < 8]
-# original_data2 = [{**x, 'location': line_to_dict(x['contents']).get('location', []), 'time': line_to_dict(x['contents']).get('time', [])} for x in original_data if len(x['contents'].split(" ")) < 8]
-# exit()
+
 # Get all hashes, then shuffle
 all_hashes = sorted(list(set([x['original'] for x in original_data])))
 all_hashes = r.sample(all_hashes, k=len(all_hashes))
@@ -148,25 +132,11 @@ data = datasets.DatasetDict({
     'test' : datasets.Dataset.from_list(test),
 })
 
-def preprocess_function(examples):
 
-    # Tokenizes the prepended input texts to convert them into a format that can be fed into the T5 model.
-    # Sets a maximum token length of 1024, and truncates any text longer than this limit.
-    model_inputs = tokenizer(examples["input"], max_length=1024, truncation=True)
-
-    labels = tokenizer(text_target=examples["output"], max_length=128, truncation=True)
-
-    # Assigns the tokenized labels to the 'labels' field of model_inputs.
-    # The 'labels' field is used during training to calculate the loss and guide model learning.
-    model_inputs["labels"] = labels["input_ids"]
-
-    # Returns the prepared inputs and labels as a single dictionary, ready for training.
-    return model_inputs
     
-
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-tokenized = data.map(preprocess_function, batched=True)
+tokenized = data.map(lambda examples: preprocess_function(examples, tokenizer), batched=True)
 
 print(tokenized)
 
@@ -198,9 +168,11 @@ trainer = Seq2SeqTrainer(
     data_collator=data_collator,
 )
 
+# Start training
 trainer.train()
 trainer.save_model(f'outputs/{saving_path}')
 
+# Re-load latest model post-training
 model = AutoModelForSeq2SeqLM.from_pretrained(f"outputs/{saving_path}").cuda()
 
 # train_expected    = []
@@ -221,12 +193,14 @@ model = AutoModelForSeq2SeqLM.from_pretrained(f"outputs/{saving_path}").cuda()
     
 # test = datasets.Dataset.from_list(sorted(tokenized['test'].to_list(), key=lambda x: len(x['input_ids']))).remove_columns(['input', 'output'])
 
+# Save some information, possibly helpful for debugging
 test_input_ids   = []
 test_expected    = []
 test_generations = []
 test_source      = []
 test_key         = []
 
+# Iterate over all the items (batches) in the test partition,
 for batch in tqdm.tqdm(torch.utils.data.DataLoader(tokenized['test'].remove_columns(['input', 'output']), batch_size=32, collate_fn = data_collator)):
     generations = model.generate(input_ids=batch['input_ids'].to(model.device), max_length=30)
     decoded     = tokenizer.batch_decode(generations, skip_special_tokens=True)
@@ -243,11 +217,13 @@ locations_generated = [x for (x, y) in zip(test_generations, test_key) if y == '
 times_generated     = [x for (x, y) in zip(test_generations, test_key) if y == 'time']
 
 from langchain_community.callbacks import get_openai_callback
+
+# Normalize dates (i.e. January 2st, 2022 -> 20220102)
 with get_openai_callback() as cb1:
     times_expected      = [', '.join([normalize_date(y) for y in x.split(', ')]) for x in times_expected]
     times_generated     = [', '.join([normalize_date(y) for y in x.split(', ')]) for x in times_generated]
 
-print(cb1)
+print(cb1) # Print the total cost, just to keep an eye; Should be < $0.02 for total run
 
 from sklearn.metrics import precision_score, recall_score, f1_score
 
