@@ -6,7 +6,7 @@ A regulat seq2seq app, aiming to:
 
 The model can be trained on a mix of original, paraphrased, and synthetic data
 """
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorForSeq2Seq, AutoModelForSeq2SeqLM, Seq2SeqTrainingArguments, Seq2SeqTrainer, set_seed
 
 import glob
 import json
@@ -16,8 +16,6 @@ import random
 import torch
 import datasets
 import argparse
-from transformers import DataCollatorForSeq2Seq
-from transformers import AutoModelForSeq2SeqLM, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
 from datetime import datetime
 from src.metrics import evaluate_sets
@@ -58,6 +56,7 @@ training_steps = args['training_steps']
 learning_rate  = args['learning_rate']
 saving_path    = args['saving_path']
 
+sed_seed(seed)
 r = random.Random(seed)
 original_data = []
 
