@@ -1,3 +1,8 @@
+"""
+Collections of metrics to evaluate the performance of the model.
+
+"""
+
 from collections import defaultdict
 import numpy as np
 
@@ -143,3 +148,4 @@ if __name__ == "__main__":
     from pprint import pprint
     pprint(evaluate_individual_sets(gold_standard, predicted), width=120)
     pprint(evaluate_individual_sets_per_token(gold_standard, predicted), width=120)
+    pprint(token_f1_score(['january', '2021'], ['january', '21']), width=120)
