@@ -50,6 +50,10 @@ set_seed(seed)
 r = random.Random(seed)
 original_data = []
 
+##########################
+### START READING DATA ###
+##########################
+
 # Read original
 for f in glob.glob('data/original/*.json'):
     with open(f) as fin:
@@ -70,12 +74,33 @@ if args['use_synthetic']:
             loaded = json.load(fin)
             original_data += [{**x, 'source': source_name2id['synthetic']} for x in loaded]
 
+########################
+### END READING DATA ###
+########################
+
+
+
+####################
+### START FILTER ###
+####################
+
+
 # Keep only the data that contains all the fields: ['contents', 'text', 'pre_context', 'post_context']
 original_data = [x for x in original_data if all(y in x.keys() for y in ['contents', 'text', 'pre_context', 'post_context'])]
 # Skip some of the data
 banned_contents_words = ['AUTHOR_INST', 'DATE', 'STRENGTHS', 'DESCRIPTION', 'USAGE', 'ASSUMPTIONS', 'All these instances are very', 'is relative temporal', 'AUTHOR_AUTHOR', 'AUTHOR', 'DATASET', 'DATASET', 'SCHEMA', "variation"]
 for w in banned_contents_words:
     original_data = [x for x in original_data if w not in x['contents']]
+
+##################
+### END FILTER ###
+##################
+
+
+
+###########################
+### START PREPROCESSING ###
+###########################
 
 # Set the "text" as the "original" field, which will be used as some form of "hash"
 original_data = [{**x, 'original': x['text']} for x in original_data]
@@ -125,6 +150,18 @@ tokenized = data.map(lambda examples: preprocess_function(examples, tokenizer), 
 
 print(tokenized)
 
+#########################
+### END PREPROCESSING ###
+#########################
+
+
+
+
+
+
+######################
+### START TRAINING ###
+######################
 
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
@@ -155,6 +192,11 @@ trainer = Seq2SeqTrainer(
 
 trainer.train()
 trainer.save_model(f'outputs/{saving_path}')
+
+####################
+### END TRAINING ###
+####################
+
 
 model = AutoModelForSeq2SeqLM.from_pretrained(f"outputs/{saving_path}").cuda()
 
