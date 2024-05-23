@@ -56,7 +56,7 @@ training_steps = args['training_steps']
 learning_rate  = args['learning_rate']
 saving_path    = args['saving_path']
 
-sed_seed(seed)
+set_seed(seed)
 r = random.Random(seed)
 original_data = []
 
