@@ -32,7 +32,7 @@ for seed in 1 2 3
 do
     for steps in 1000 2000 5000 10000
     do
-        echo "CUDA_VISIBLE_DEVICES=0 python -m src.t5_specific_event --seed $seed --weight_decay 0.1 --model_name t5-base --saving_path ${path}/results_${index} --training_steps $steps --use_original --use_curated --use_paraphrase --use_synthetic >> ${path}/results_${index}.txt"
+        CUDA_VISIBLE_DEVICES=0 python -m src.t5_specific_event --seed $seed --weight_decay 0.1 --model_name t5-base --saving_path ${path}/results_${index} --training_steps $steps --use_original --use_curated --use_paraphrase --use_synthetic >> ${path}/results_${index}.txt
         index=$((index + 1))
     done
 done
@@ -44,7 +44,7 @@ for seed in 1 2 3
 do
     for steps in 1000 2000 5000 10000
     do
-        echo CUDA_VISIBLE_DEVICES=0 python -m src.t5_all_events --seed $seed --weight_decay 0.1 --model_name t5-base --saving_path ${path}/results_${index} --training_steps $steps --use_original --use_curated --use_paraphrase --use_synthetic >> ${path}/results_${index}.txt
+        CUDA_VISIBLE_DEVICES=0 python -m src.t5_all_events --seed $seed --weight_decay 0.1 --model_name t5-base --saving_path ${path}/results_${index} --training_steps $steps --use_original --use_curated --use_paraphrase --use_synthetic >> ${path}/results_${index}.txt
         index=$((index + 1))
     done
 done
