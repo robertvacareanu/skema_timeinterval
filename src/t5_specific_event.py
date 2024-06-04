@@ -33,6 +33,7 @@ source_id2name = {
     0: 'original',
     1: 'paraphrase',
     2: 'synthetic',
+    3: 'curated',
 }
 
 source_name2id = {v:k for (k, v) in source_id2name.items()}
@@ -69,6 +70,11 @@ for f in glob.glob('data/original/*.json'):
     with open(f) as fin:
         original_data += json.load(fin)
         original_data = [{**x, 'source': source_name2id['original']} for x in original_data]
+
+for f in glob.glob('data/curated/*.json'):
+    with open(f) as fin:
+        curated_data = json.load(fin)
+        original_data += [{**x, 'source': source_name2id['curated']} for x in curated_data]
 
 # Read paraphrases (if needed)
 if args['use_paraphrase']:
@@ -278,19 +284,22 @@ def evaluate(gold, pred):
     }
 
 test_results_original   = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'original'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'original'])
+test_results_curated   = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'curated'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'curated'])
 test_results_synthetic  = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'synthetic'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'synthetic'])
 test_results_paraphrase = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'paraphrase'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'paraphrase'])
 test_results_overall    = evaluate(test_expected, test_generations)
 
 test_results_original_location   = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'original' and key == 'location'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'original' and key == 'location'])
+test_results_curated_location   = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'curated' and key == 'location'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'curated' and key == 'location'])
 test_results_synthetic_location  = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'synthetic' and key == 'location'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'synthetic' and key == 'location'])
 test_results_paraphrase_location = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'paraphrase' and key == 'location'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'paraphrase' and key == 'location'])
 test_results_overall_location    = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if key == 'location'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if key == 'location'])
 
 test_results_original_time   = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'original' and key == 'time'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'original' and key == 'time'])
+test_results_curated_time   = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'curated' and key == 'time'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'curated' and key == 'time'])
 test_results_synthetic_time  = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'synthetic' and key == 'time'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'synthetic' and key == 'time'])
 test_results_paraphrase_time = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if source == 'paraphrase' and key == 'time'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if source == 'paraphrase' and key == 'time'])
-test_results_overall_location    = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if key == 'time'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if key == 'time'])
+test_results_overall_time    = evaluate([x for (x, source, key) in zip(test_expected, test_source, test_key) if key == 'time'], [x for (x, source, key) in zip(test_generations, test_source, test_key) if key == 'time'])
 
 # test_results_original_token_level   = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'original'], [x for (x, source) in zip(test_generations, test_source) if source == 'original'], evaluate_at_token_level=True)
 # test_results_synthetic_token_level  = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'synthetic'], [x for (x, source) in zip(test_generations, test_source) if source == 'synthetic'], evaluate_at_token_level=True)
@@ -303,20 +312,24 @@ with open(f'{saving_path}.jsonl', 'a+') as fout:
         'args'            : args,
 
         'test_original_overall'   : test_results_original,
-        'test_original_locaton'   : test_results_original,
-        'test_original_time'      : test_results_original,
+        'test_original_locaton'   : test_results_original_location,
+        'test_original_time'      : test_results_original_time,
+
+        'test_curated_overall'   : test_results_curated,
+        'test_curated_locaton'   : test_results_curated_location,
+        'test_curated_time'      : test_results_curated_time,
 
         'test_synthetic_overall'  : test_results_synthetic,
-        'test_synthetic_locaton'  : test_results_synthetic,
-        'test_synthetic_time'     : test_results_synthetic,
+        'test_synthetic_locaton'  : test_results_synthetic_location,
+        'test_synthetic_time'     : test_results_synthetic_time,
 
         'test_paraphrase_overall' : test_results_paraphrase,
-        'test_paraphrase_locaton' : test_results_paraphrase,
-        'test_paraphrase_time'    : test_results_paraphrase,
+        'test_paraphrase_locaton' : test_results_paraphrase_location,
+        'test_paraphrase_time'    : test_results_paraphrase_time,
 
         'test_overall_overall'    : test_results_overall,
-        'test_overall_locaton'    : test_results_overall,
-        'test_overall_time'       : test_results_overall,
+        'test_overall_locaton'    : test_results_overall_location,
+        'test_overall_time'       : test_results_overall_time,
 
         'predictions'             : [{'expected': te, 'generation': tg, 'source': ts, 'key': tk} for tii, te, tg, ts, tk in zip(test_input_ids, test_expected, test_generations, test_source, test_key)], 
         

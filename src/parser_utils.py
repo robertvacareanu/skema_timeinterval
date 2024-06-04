@@ -10,6 +10,7 @@ def get_parser():
     parser.add_argument("--training_steps", type=int, default=10000, help="The number of training steps (gradient updates)")
     parser.add_argument("--learning_rate", type=float, default=3e-5, help="The learning rate")
     parser.add_argument("--use_original", action='store_true', help="If set, we will use original data for training. We evaluate on original data regardless of the status of this flag")
+    parser.add_argument("--use_curated", action='store_true', help="If set, we will use curated data for training. We evaluate on original data regardless of the status of this flag")
     parser.add_argument("--use_paraphrase", action='store_true', help="If set, use paraphrase data for training")
     parser.add_argument("--use_synthetic", action='store_true', help="If set, use synthetic data for training")
     parser.add_argument("--print_debug", action='store_true', )

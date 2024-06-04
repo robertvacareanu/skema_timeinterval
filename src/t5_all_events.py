@@ -31,6 +31,7 @@ source_id2name = {
     0: 'original',
     1: 'paraphrase',
     2: 'synthetic',
+    3: 'curated',
 }
 
 source_name2id = {v:k for (k, v) in source_id2name.items()}
@@ -59,6 +60,12 @@ for f in glob.glob('data/original/*.json'):
     with open(f) as fin:
         original_data += json.load(fin)
         original_data = [{**x, 'source': source_name2id['original']} for x in original_data]
+
+# Read the curated data
+for f in glob.glob('data/curated/*.json'):
+    with open(f) as fin:
+        curated_data = json.load(fin)
+        original_data += [{**x, 'source': source_name2id['curated']} for x in curated_data]
 
 # Read paraphrases (if needed)
 if args['use_paraphrase']:
@@ -242,11 +249,13 @@ print(cb1)
 
 train_results = {}#evaluate_sets(train_expected, train_generations)
 test_results_original   = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'original'], [x for (x, source) in zip(test_generations, test_source) if source == 'original'])
+test_results_curated   = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'curated'], [x for (x, source) in zip(test_generations, test_source) if source == 'curated'])
 test_results_synthetic  = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'synthetic'], [x for (x, source) in zip(test_generations, test_source) if source == 'synthetic'])
 test_results_paraphrase = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'paraphrase'], [x for (x, source) in zip(test_generations, test_source) if source == 'paraphrase'])
 test_results_overall    = evaluate_sets(test_expected, test_generations)
 
 test_results_original_token_level   = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'original'], [x for (x, source) in zip(test_generations, test_source) if source == 'original'], evaluate_at_token_level=True)
+test_results_curated_token_level   = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'curated'], [x for (x, source) in zip(test_generations, test_source) if source == 'curated'], evaluate_at_token_level=True)
 test_results_synthetic_token_level  = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'synthetic'], [x for (x, source) in zip(test_generations, test_source) if source == 'synthetic'], evaluate_at_token_level=True)
 test_results_paraphrase_token_level = evaluate_sets([x for (x, source) in zip(test_expected, test_source) if source == 'paraphrase'], [x for (x, source) in zip(test_generations, test_source) if source == 'paraphrase'], evaluate_at_token_level=True)
 test_results_overall_token_level    = evaluate_sets(test_expected, test_generations, evaluate_at_token_level=True)
@@ -257,11 +266,13 @@ with open(f'{saving_path}.jsonl', 'a+') as fout:
         'args'            : args,
 
         'test_original'   : sorted(test_results_original, key=lambda x: x['key']),
+        'test_curated'   : sorted(test_results_curated, key=lambda x: x['key']),
         'test_synthetic'  : sorted(test_results_synthetic, key=lambda x: x['key']),
         'test_paraphrase' : sorted(test_results_paraphrase, key=lambda x: x['key']),
         'test_overall'    : sorted(test_results_overall, key=lambda x: x['key']),
         
         'test_original_token_level'   : sorted(test_results_original_token_level, key=lambda x: x['key']),
+        'test_curated_token_level'   : sorted(test_results_curated_token_level, key=lambda x: x['key']),
         'test_synthetic_token_level'  : sorted(test_results_synthetic_token_level, key=lambda x: x['key']),
         'test_paraphrase_token_level' : sorted(test_results_paraphrase_token_level, key=lambda x: x['key']),
         'test_overall_token_level'    : sorted(test_results_overall_token_level, key=lambda x: x['key']),

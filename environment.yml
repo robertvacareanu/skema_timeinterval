@@ -153,7 +153,6 @@ dependencies:
     - dill==0.3.7
     - distro==1.9.0
     - docker-pycreds==0.4.0
-    - en-core-web-sm==3.7.1
     - flatbuffers==23.5.26
     - fonttools==4.47.2
     - frozenlist==1.4.1
