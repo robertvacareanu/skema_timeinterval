@@ -78,7 +78,7 @@ for f in glob.glob('data/curated/*.json'):
 
 # Read paraphrases (if needed)
 if args['use_paraphrase']:
-    for f in glob.glob('data/paraphrases/240423/*.jsonl'):
+    for f in glob.glob('data/paraphrases/240605/*.jsonl'):
         with open(f) as fin:
             for line in fin:
                 original_data.append({**json.loads(line), 'source': source_name2id['paraphrase']})
@@ -168,7 +168,7 @@ data = datasets.DatasetDict({
     
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-tokenized = data.map(lambda examples: preprocess_function(examples, tokenizer), batched=True)
+tokenized = data.map(lambda examples: preprocess_function(examples, tokenizer), batched=True, load_from_cache_file=False)
 
 print(tokenized)
 
